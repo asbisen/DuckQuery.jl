@@ -2,7 +2,7 @@
 
 A Julia library that provides a clean, flexible interface for executing SQL queries against various data sources using DuckDB as the backend engine.
 
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen)]() 
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen)]()
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 ## Table of Contents
@@ -88,7 +88,7 @@ using DataFrames
 
 # Query an existing database file
 results = querydf(
-    "customers.db", 
+    "customers.db",
     "SELECT * FROM customers WHERE region = 'East' LIMIT 20"
 )
 
@@ -163,11 +163,11 @@ results = querydf(df, "SELECT * FROM df WHERE age > 30")
 results = querydf(
     df,
     """
-    SELECT 
-        department, 
-        COUNT(*) as employee_count, 
-        AVG(age) as avg_age 
-    FROM df 
+    SELECT
+        department,
+        COUNT(*) as employee_count,
+        AVG(age) as avg_age
+    FROM df
     GROUP BY department
     ORDER BY employee_count DESC
     """
@@ -177,11 +177,11 @@ results = querydf(
 results = querydf(
     df,
     """
-    SELECT 
-        id, 
-        name, 
+    SELECT
+        id,
+        name,
         age,
-        CASE 
+        CASE
             WHEN age < 30 THEN 'Junior'
             WHEN age < 40 THEN 'Mid-level'
             ELSE 'Senior'
@@ -206,7 +206,7 @@ sales_data = DataFrame(
 pivot_results = querydf(
     sales_data,
     """
-    SELECT 
+    SELECT
         date,
         SUM(CASE WHEN region = 'East' THEN amount ELSE 0 END) as East,
         SUM(CASE WHEN region = 'West' THEN amount ELSE 0 END) as West,
@@ -244,7 +244,7 @@ orders = DataFrame(
 results = querydf(
     Dict("customers" => customers, "orders" => orders),
     """
-    SELECT 
+    SELECT
         c.name,
         c.city,
         COUNT(o.id) as order_count,
@@ -268,7 +268,7 @@ products = DataFrame(
 profitability = querydf(
     Dict("customers" => customers, "orders" => orders, "products" => products),
     """
-    SELECT 
+    SELECT
         p.category,
         COUNT(o.id) as sales_count,
         SUM(o.amount) as revenue,
@@ -305,21 +305,21 @@ results = querydf(
         "new_data" => new_customers   # DataFrame
     ),
     """
-    SELECT 
-        'Existing' as source, 
-        name, 
-        signup_date 
-    FROM existing.customers 
+    SELECT
+        'Existing' as source,
+        name,
+        signup_date
+    FROM existing.customers
     WHERE signup_date > '2023-01-01'
-    
+
     UNION ALL
-    
-    SELECT 
-        'New' as source, 
-        name, 
-        signup_date 
+
+    SELECT
+        'New' as source,
+        name,
+        signup_date
     FROM new_data
-    
+
     ORDER BY signup_date DESC, name
     """
 )
@@ -338,7 +338,7 @@ enriched_data = querydf(
         "products" => "product_catalog.db"
     ),
     """
-    SELECT 
+    SELECT
         t.id as transaction_id,
         t.product_code,
         p.name as product_name,
@@ -373,14 +373,14 @@ results = querydf(
 ) do conn
     # Register the DataFrame
     DuckQuery.register_dataframe(conn, "data_temp", data)
-    
+
     # Create a filtered view for analysis
     DuckDB.execute(conn, """
         CREATE TEMP VIEW data_table AS
         SELECT * FROM data_temp
         WHERE value > 0.3
     """)
-    
+
     # Could perform more operations on the connection here
     # The query in the outer function will be executed after this block
 end
@@ -393,11 +393,14 @@ querydf(
         "SELECT * FROM summary ORDER BY category"
     ]
 ) do conn
+    # Register input data
+    DuckQuery.register_dataframe(conn, "input_data", data)
+
     # Calculate aggregations and store in temporary table
     DuckDB.execute(conn, """
         CREATE TEMP TABLE aggregated_data AS
-        SELECT 
-            category, 
+        SELECT
+            category,
             COUNT(*) as count,
             MIN(value) as min_value,
             MAX(value) as max_value,
@@ -406,9 +409,7 @@ querydf(
         FROM input_data
         GROUP BY category
     """)
-    
-    # Register input data
-    DuckQuery.register_dataframe(conn, "input_data", data)
+
 end
 ```
 
@@ -427,38 +428,38 @@ DuckQuery.with_connection("analysis.db", verbose=true) do conn, config
             value DOUBLE
         )
     """)
-    
+
     # Insert data
     for i in 1:10
         DuckDB.execute(conn, """
             INSERT INTO metrics VALUES ($i, 'Metric-$i', $(rand() * 100))
         """)
     end
-    
+
     # Create a view for filtered data
     DuckDB.execute(conn, """
         CREATE VIEW IF NOT EXISTS high_metrics AS
         SELECT * FROM metrics WHERE value > 50
     """)
-    
+
     # Query the view
     high_values = DuckQuery.execute_query(conn, "SELECT * FROM high_metrics", config)
     println("High metrics: ", high_values)
-    
+
     # Create an index for better performance
     DuckDB.execute(conn, "CREATE INDEX IF NOT EXISTS idx_metric_value ON metrics(value)")
-    
+
     # Run a final query
     result = DuckQuery.execute_query(conn, """
-        SELECT 
+        SELECT
             AVG(value) as avg_value,
             COUNT(*) as total_count,
             COUNT(CASE WHEN value > 50 THEN 1 END) as high_count
         FROM metrics
     """, config)
-    
+
     println("Summary: ", result)
-    
+
     # Return the final result
     return result
 end
@@ -524,8 +525,8 @@ function filter_current_month(query)
     current_month = month(today())
     current_year = year(today())
     return replace(
-        query, 
-        "FROM sales_data" => 
+        query,
+        "FROM sales_data" =>
         "FROM sales_data WHERE EXTRACT(MONTH FROM date) = $current_month AND EXTRACT(YEAR FROM date) = $current_year"
     )
 end
@@ -552,7 +553,7 @@ end
 monthly_analysis = querydf(
     sales_data,
     """
-    SELECT 
+    SELECT
         region,
         AVG(sales) as avg_sales,
         MAX(sales) as max_sales
@@ -586,10 +587,10 @@ orders = DataFrame(
 results = querydf(
     Dict("orders" => orders),
     """
-    WITH 
+    WITH
     -- Calculate monthly sales
     monthly_sales AS (
-        SELECT 
+        SELECT
             EXTRACT(MONTH FROM order_date) AS month,
             EXTRACT(YEAR FROM order_date) AS year,
             SUM(total_amount) AS monthly_revenue,
@@ -597,13 +598,13 @@ results = querydf(
         FROM orders
         GROUP BY month, year
     ),
-    
+
     -- Calculate customer spending segments
     customer_segments AS (
         SELECT
             customer_id,
             SUM(total_amount) AS total_spent,
-            CASE 
+            CASE
                 WHEN SUM(total_amount) > 2000 THEN 'High'
                 WHEN SUM(total_amount) > 1000 THEN 'Medium'
                 ELSE 'Low'
@@ -611,16 +612,16 @@ results = querydf(
         FROM orders
         GROUP BY customer_id
     )
-    
+
     -- Main query using both CTEs
-    SELECT 
+    SELECT
         cs.segment,
         COUNT(DISTINCT cs.customer_id) AS customer_count,
         SUM(ms.monthly_revenue) AS total_revenue,
         AVG(ms.monthly_revenue) AS avg_monthly_revenue
     FROM customer_segments cs
     JOIN orders o ON cs.customer_id = o.customer_id
-    JOIN monthly_sales ms ON 
+    JOIN monthly_sales ms ON
         EXTRACT(MONTH FROM o.order_date) = ms.month AND
         EXTRACT(YEAR FROM o.order_date) = ms.year
     GROUP BY cs.segment
@@ -647,41 +648,41 @@ stock_prices = DataFrame(
 analysis = querydf(
     stock_prices,
     """
-    SELECT 
+    SELECT
         symbol,
         date,
         price,
         -- Calculate moving averages
         AVG(price) OVER (
-            PARTITION BY symbol 
-            ORDER BY date 
+            PARTITION BY symbol
+            ORDER BY date
             ROWS BETWEEN 6 PRECEDING AND CURRENT ROW
         ) AS moving_avg_7day,
-        
+
         -- Calculate price changes
         price - LAG(price, 1) OVER (
-            PARTITION BY symbol 
+            PARTITION BY symbol
             ORDER BY date
         ) AS daily_change,
-        
+
         -- Calculate percent changes
         (price - LAG(price, 1) OVER (
-            PARTITION BY symbol 
+            PARTITION BY symbol
             ORDER BY date
         )) / LAG(price, 1) OVER (
-            PARTITION BY symbol 
+            PARTITION BY symbol
             ORDER BY date
         ) * 100 AS daily_percent_change,
-        
+
         -- Calculate ranks
         RANK() OVER (
-            PARTITION BY symbol 
+            PARTITION BY symbol
             ORDER BY price DESC
         ) AS price_rank,
-        
+
         -- Calculate percentiles
         NTILE(4) OVER (
-            PARTITION BY symbol 
+            PARTITION BY symbol
             ORDER BY price
         ) AS price_quartile
     FROM df
@@ -770,7 +771,7 @@ large_df = DataFrame(
 @time basic_result = querydf(
     large_df,
     """
-    SELECT 
+    SELECT
         category,
         COUNT(*) as count,
         AVG(value_a) as avg_a,
@@ -784,7 +785,7 @@ large_df = DataFrame(
 @time optimized_result = querydf(
     large_df,
     """
-    SELECT 
+    SELECT
         category,
         COUNT(*) as count,
         AVG(value_a) as avg_a,
@@ -803,7 +804,7 @@ large_df = DataFrame(
 complex_query_result = querydf(
     Dict("data" => large_df),
     """
-    SELECT 
+    SELECT
         category,
         percentile_cont(0.5) WITHIN GROUP (ORDER BY value_a) AS median_a,
         percentile_cont(0.5) WITHIN GROUP (ORDER BY value_b) AS median_b,
