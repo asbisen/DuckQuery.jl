@@ -1,0 +1,35 @@
+# Compiled files
+*.jl.cov
+*.jl.*.cov
+*.jl.mem
+*.jl.*.mem
+
+# Julia package manager files
+Manifest.toml
+
+# Data files
+*.dat
+*.csv
+*.tsv
+*.json
+*.txt
+
+# Cache files and directories
+.julia/
+.juliahistory
+
+# Scratch files
+scratch/
+temp/
+tmp/
+
+# Docs
+docs/build/
+docs/site/
+
+# Jupyter notebook checkpoints
+.ipynb_checkpoints/
+*.ipynb
+
+# Operating system files
+.DS_Store
