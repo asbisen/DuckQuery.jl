@@ -10,7 +10,7 @@ Base.showerror(io::IO, e::DuckQueryError) = print(io, "DuckQueryError: ", e.mess
 # Configuration type
 struct DuckQueryConfig
     init_queries::Vector{String}
-    init_config::Dict{Symbol, Any}
+    init_config::AbstractDict{Symbol, <:Any}
     verbose::Bool
     profile::Bool
     preprocessors::Vector{<:Function}
@@ -20,7 +20,7 @@ struct DuckQueryConfig
     # Constructor with defaults
     function DuckQueryConfig(
         init_queries::Union{String, Vector{String}} = String[],
-        init_config::Dict{Symbol, Any} = Dict{Symbol, Any}(),
+        init_config::AbstractDict{Symbol, <:Any} = Dict{Symbol, Any}(),
         verbose::Bool = false,
         profile::Bool = false,
         preprocessors::Vector{<:Function} = Function[],
@@ -29,12 +29,12 @@ struct DuckQueryConfig
     )
         # Convert single string to vector if needed
         init_queries_vec = isa(init_queries, String) ? [init_queries] : init_queries
-        
+
         # Validate on_error value
         if !(on_error in [:throw, :return_empty, :log])
             throw(ArgumentError("on_error must be one of :throw, :return_empty, or :log"))
         end
-        
+
         new(init_queries_vec, init_config, verbose, profile, preprocessors, postprocessors, on_error)
     end
 end
