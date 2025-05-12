@@ -24,7 +24,7 @@ jobs:
             arch: x64
           - os: macos-latest
             version: "1"
-            arch: x64
+            arch: aarch64
           - os: ubuntu-latest
             version: "nightly"
             arch: x64
