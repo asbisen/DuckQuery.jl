@@ -1,38 +1,36 @@
 # Core functionality implementing the querydf methods
 
 """
-    querydf(dbfile::String, query::String; kwargs...)::DataFrame
+    querydf(sources::Dict{String, <:Any}, query::String; kwargs...)::DataFrame
 
-Execute a SQL query against a DuckDB database file.
+Execute a SQL query against a mix of DataFrames and database files.
 
 # Arguments
-- `dbfile::String`: Path to the database file or ":memory:" for in-memory database
+- `sources::Dict{String, <:Any}`: Named sources (DataFrames or database file paths)
 - `query::String`: SQL query to execute
-- `init_queries::Union{String, Vector{String}}`: Initialization queries to run before the main query
-- `init_config::AbstractDict{Symbol, <:Any}`: Configuration settings for DuckDB
-- `verbose::Bool`: Enable verbose logging
-- `profile::Bool`: Enable query profiling
-- `preprocessors::Vector{<:Function}`: Functions to transform the query before execution
-- `postprocessors::Vector{<:Function}`: Functions to transform the result DataFrame
-- `on_error::Symbol`: Error handling strategy (:throw, :return_empty, :log)
+- `kwargs`: See other variants for available keyword arguments, including `readonly` which, when true,
+  will open all database files specified in `sources` in read-only mode
 
 # Returns
 - `DataFrame`: Result of the query
 """
+
+
 function querydf(
     dbfile::String,
     query::String;
-    init_queries::Union{String, Vector{String}} = String[],
-    init_config::AbstractDict{Symbol, <:Any} = Dict{Symbol, Any}(),
-    verbose::Bool = false,
-    profile::Bool = false,
-    preprocessors::Vector{<:Function} = Function[],
-    postprocessors::Vector{<:Function} = Function[],
-    on_error::Symbol = :throw
+    init_queries::Union{String,Vector{String}}=String[],
+    init_config::AbstractDict{Symbol,<:Any}=Dict{Symbol,Any}(),
+    verbose::Bool=false,
+    profile::Bool=false,
+    preprocessors::Vector{<:Function}=Function[],
+    postprocessors::Vector{<:Function}=Function[],
+    on_error::Symbol=:throw,
+    readonly::Bool=false
 )::DataFrame
     config = DuckQueryConfig(
         init_queries, init_config, verbose, profile,
-        preprocessors, postprocessors, on_error
+        preprocessors, postprocessors, on_error, readonly
     )
 
     if profile
@@ -65,22 +63,24 @@ function querydf(
     end
 end
 
+
 # Do-block variant for single query on database file
 function querydf(
     f::Function,
     dbfile::String,
     query::String;
-    init_queries::Union{String, Vector{String}} = String[],
-    init_config::AbstractDict{Symbol, <:Any} = Dict{Symbol, Any}(),
-    verbose::Bool = false,
-    profile::Bool = false,
-    preprocessors::Vector{<:Function} = Function[],
-    postprocessors::Vector{<:Function} = Function[],
-    on_error::Symbol = :throw
+    init_queries::Union{String,Vector{String}}=String[],
+    init_config::AbstractDict{Symbol,<:Any}=Dict{Symbol,Any}(),
+    verbose::Bool=false,
+    profile::Bool=false,
+    preprocessors::Vector{<:Function}=Function[],
+    postprocessors::Vector{<:Function}=Function[],
+    on_error::Symbol=:throw,
+    readonly::Bool=false
 )::DataFrame
     config = DuckQueryConfig(
         init_queries, init_config, verbose, profile,
-        preprocessors, postprocessors, on_error
+        preprocessors, postprocessors, on_error, readonly
     )
 
     if profile
@@ -115,6 +115,7 @@ function querydf(
         end
     end
 end
+
 
 """
     querydf(dbfile::String, queries::Vector{String}; kwargs...)::DataFrame
@@ -132,17 +133,18 @@ Execute multiple SQL queries in sequence against a DuckDB database file.
 function querydf(
     dbfile::String,
     queries::Vector{String};
-    init_queries::Union{String, Vector{String}} = String[],
-    init_config::AbstractDict{Symbol, <:Any} = Dict{Symbol, Any}(),
-    verbose::Bool = false,
-    profile::Bool = false,
-    preprocessors::Vector{<:Function} = Function[],
-    postprocessors::Vector{<:Function} = Function[],
-    on_error::Symbol = :throw
+    init_queries::Union{String,Vector{String}}=String[],
+    init_config::AbstractDict{Symbol,<:Any}=Dict{Symbol,Any}(),
+    verbose::Bool=false,
+    profile::Bool=false,
+    preprocessors::Vector{<:Function}=Function[],
+    postprocessors::Vector{<:Function}=Function[],
+    on_error::Symbol=:throw,
+    readonly::Bool=false
 )::DataFrame
     config = DuckQueryConfig(
         init_queries, init_config, verbose, profile,
-        preprocessors, postprocessors, on_error
+        preprocessors, postprocessors, on_error, readonly
     )
 
     if profile
@@ -175,22 +177,24 @@ function querydf(
     end
 end
 
+
 # Do-block variant for multiple queries on database file
 function querydf(
     f::Function,
     dbfile::String,
     queries::Vector{String};
-    init_queries::Union{String, Vector{String}} = String[],
-    init_config::AbstractDict{Symbol, <:Any} = Dict{Symbol, Any}(),
-    verbose::Bool = false,
-    profile::Bool = false,
-    preprocessors::Vector{<:Function} = Function[],
-    postprocessors::Vector{<:Function} = Function[],
-    on_error::Symbol = :throw
+    init_queries::Union{String,Vector{String}}=String[],
+    init_config::AbstractDict{Symbol,<:Any}=Dict{Symbol,Any}(),
+    verbose::Bool=false,
+    profile::Bool=false,
+    preprocessors::Vector{<:Function}=Function[],
+    postprocessors::Vector{<:Function}=Function[],
+    on_error::Symbol=:throw,
+    readonly::Bool=false
 )::DataFrame
     config = DuckQueryConfig(
         init_queries, init_config, verbose, profile,
-        preprocessors, postprocessors, on_error
+        preprocessors, postprocessors, on_error, readonly
     )
 
     if profile
@@ -226,6 +230,7 @@ function querydf(
     end
 end
 
+
 """
     querydf(df::DataFrame, query::String; kwargs...)::DataFrame
 
@@ -242,17 +247,18 @@ Execute a SQL query against a DataFrame.
 function querydf(
     df::DataFrame,
     query::String;
-    init_queries::Union{String, Vector{String}} = String[],
-    init_config::AbstractDict{Symbol, <:Any} = Dict{Symbol, Any}(),
-    verbose::Bool = false,
-    profile::Bool = false,
-    preprocessors::Vector{<:Function} = Function[],
-    postprocessors::Vector{<:Function} = Function[],
-    on_error::Symbol = :throw
+    init_queries::Union{String,Vector{String}}=String[],
+    init_config::AbstractDict{Symbol,<:Any}=Dict{Symbol,Any}(),
+    verbose::Bool=false,
+    profile::Bool=false,
+    preprocessors::Vector{<:Function}=Function[],
+    postprocessors::Vector{<:Function}=Function[],
+    on_error::Symbol=:throw,
+    readonly::Bool=false
 )::DataFrame
     config = DuckQueryConfig(
         init_queries, init_config, verbose, profile,
-        preprocessors, postprocessors, on_error
+        preprocessors, postprocessors, on_error, readonly
     )
 
     if profile
@@ -288,6 +294,7 @@ function querydf(
     end
 end
 
+
 """
     querydf(dfs::Dict{String, DataFrame}, query::String; kwargs...)::DataFrame
 
@@ -302,19 +309,20 @@ Execute a SQL query against multiple DataFrames.
 - `DataFrame`: Result of the query
 """
 function querydf(
-    dfs::Dict{String, DataFrame},
+    dfs::Dict{String,DataFrame},
     query::String;
-    init_queries::Union{String, Vector{String}} = String[],
-    init_config::AbstractDict{Symbol, <:Any} = Dict{Symbol, Any}(),
-    verbose::Bool = false,
-    profile::Bool = false,
-    preprocessors::Vector{<:Function} = Function[],
-    postprocessors::Vector{<:Function} = Function[],
-    on_error::Symbol = :throw
+    init_queries::Union{String,Vector{String}}=String[],
+    init_config::AbstractDict{Symbol,<:Any}=Dict{Symbol,Any}(),
+    verbose::Bool=false,
+    profile::Bool=false,
+    preprocessors::Vector{<:Function}=Function[],
+    postprocessors::Vector{<:Function}=Function[],
+    on_error::Symbol=:throw,
+    readonly::Bool=false
 )::DataFrame
     config = DuckQueryConfig(
         init_queries, init_config, verbose, profile,
-        preprocessors, postprocessors, on_error
+        preprocessors, postprocessors, on_error, readonly
     )
 
     if profile
@@ -352,6 +360,7 @@ function querydf(
     end
 end
 
+
 """
     querydf(sources::Dict{String, <:Any}, query::String; kwargs...)::DataFrame
 
@@ -366,19 +375,20 @@ Execute a SQL query against a mix of DataFrames and database files.
 - `DataFrame`: Result of the query
 """
 function querydf(
-    sources::Dict{String, <:Any},
+    sources::Dict{String,<:Any},
     query::String;
-    init_queries::Union{String, Vector{String}} = String[],
-    init_config::AbstractDict{Symbol, <:Any} = Dict{Symbol, Any}(),
-    verbose::Bool = false,
-    profile::Bool = false,
-    preprocessors::Vector{<:Function} = Function[],
-    postprocessors::Vector{<:Function} = Function[],
-    on_error::Symbol = :throw
+    init_queries::Union{String,Vector{String}}=String[],
+    init_config::AbstractDict{Symbol,<:Any}=Dict{Symbol,Any}(),
+    verbose::Bool=false,
+    profile::Bool=false,
+    preprocessors::Vector{<:Function}=Function[],
+    postprocessors::Vector{<:Function}=Function[],
+    on_error::Symbol=:throw,
+    readonly::Bool=false
 )::DataFrame
     config = DuckQueryConfig(
         init_queries, init_config, verbose, profile,
-        preprocessors, postprocessors, on_error
+        preprocessors, postprocessors, on_error, readonly
     )
 
     if profile
@@ -398,8 +408,12 @@ function querydf(
                 # Register DataFrame directly
                 register_dataframe(conn, name, source)
             elseif isa(source, String)
-                # Attach database file
-                attach_query = "ATTACH '$(source)' AS $(name)"
+                # Attach database file with read-only flag if specified
+                if config.readonly
+                    attach_query = "ATTACH '$(source)' AS $(name) (READ_ONLY)"
+                else
+                    attach_query = "ATTACH '$(source)' AS $(name)"
+                end
                 log_message("Attaching database: $attach_query", config.verbose)
                 DuckDB.execute(conn, attach_query)
             else

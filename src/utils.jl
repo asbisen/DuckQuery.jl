@@ -19,8 +19,16 @@ Initialize a DuckDB connection to the given source with the specified configurat
 function initialize_connection(source::String, config::DuckQueryConfig)
     log_message("Initializing connection to $source", config.verbose)
 
-    # Create connection
-    conn = DuckDB.DB(source)
+    # Create connection with read-only mode if specified
+    conn = nothing
+    if config.readonly && source != ":memory:"
+        log_message("Opening database in read-only mode", config.verbose)
+        cnf = DuckDB.Config()
+        DuckDB.set_config(cnf, "access_mode", "READ_ONLY")
+        conn = DuckDB.DB(source, cnf)
+    else
+        conn = DuckDB.DB(source)
+    end
 
     # Apply configuration
     for (key, value) in config.init_config
@@ -33,7 +41,7 @@ function initialize_connection(source::String, config::DuckQueryConfig)
             DuckDB.execute(conn, "SET memory_limit='$(value)'")
         elseif key == :threads
             DuckDB.execute(conn, "SET threads=$(value)")
-        # Handle other configuration settings
+            # Handle other configuration settings
         elseif key == :extensions
             if isa(value, Vector)
                 for extension in value
@@ -55,6 +63,8 @@ function initialize_connection(source::String, config::DuckQueryConfig)
 
     return conn
 end
+
+
 
 """
     register_dataframe(conn::DuckDB.DB, name::String, df::DataFrame)
