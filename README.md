@@ -59,9 +59,18 @@ Here's a quick overview of how to use DuckQuery.jl:
 ```julia
 using DuckQuery
 using DataFrames
+using DuckDB
+
+# Create a sample database with a table 'products'
+# Create a sample database file with some data
+conn = DuckDB.open("data.db")
+DuckDB.execute(conn, "CREATE TABLE products (id INTEGER, name TEXT, price FLOAT, inventory INTEGER)")
+DuckDB.execute(conn, "INSERT INTO products VALUES (1, 'Laptop', 999.99, 25), (2, 'Phone', 599.99, 50), (3, 'Headphones', 129.99, 100)")
+DuckDB.close(conn)
+
 
 # Query a database file
-results = querydf("data.db", "SELECT * FROM table LIMIT 10")
+results = querydf("data.db", "SELECT * FROM products LIMIT 10")
 
 # Query an in-memory DataFrame
 df = DataFrame(id = 1:3, name = ["Alice", "Bob", "Charlie"])
@@ -70,7 +79,7 @@ results = querydf(df, "SELECT * FROM df WHERE id > 1")
 # Execute a query with verbosity and profiling
 results = querydf(
     "data.db",
-    "SELECT * FROM table WHERE value > 100",
+    "SELECT * FROM products WHERE price > 100",
     verbose = true,
     profile = true
 )
@@ -786,9 +795,9 @@ analysis = querydf(
 )
 ```
 
-### Error Handling
+### Error Handling and Type Management
 
-#### Using Different Error Strategies
+#### Using Different Error Strategies and Handling Complex Types
 
 ```julia
 using DuckQuery
@@ -876,6 +885,24 @@ large_df = DataFrame(
     """
 )
 
+# Example handling complex types with missing values
+complex_df = DataFrame(
+    int_with_missing = Union{Int64, Missing}[1, 2, missing, 4],
+    float_with_missing = Union{Float64, Missing}[1.1, missing, 3.3, 4.4],
+    string_with_missing = Union{String, Missing}["a", "b", missing, "d"]
+)
+
+# Query filtering out missing values
+@time missing_filtered = querydf(
+    complex_df,
+    """
+    SELECT * FROM df
+    WHERE int_with_missing IS NOT NULL
+      AND float_with_missing IS NOT NULL
+      AND string_with_missing IS NOT NULL
+    """
+)
+
 # Same query with performance configuration
 @time optimized_result = querydf(
     large_df,
@@ -955,6 +982,8 @@ The `init_config` dictionary can include:
 - `:memory_limit`: Maximum memory usage (e.g., "4GB")
 - `:threads`: Number of threads to use
 - `:extensions`: Extensions to load (e.g., ["parquet", "json", "httpfs"])
+- `:batch_size`: Number of rows to process in each batch when manually registering DataFrames (default: 1000)
+- `:force_manual_registration`: Force manual DataFrame registration instead of using DuckDB's native registration (default: false)
 
 ## Contributing
 

@@ -41,8 +41,8 @@ function querydf(
     conn = nothing
 
     try
-        # Initialize connection
-        conn = initialize_connection(dbfile, config)
+        # Initialize connection using the SourceManager
+        conn = SourceManager.initialize_connection(dbfile, config)
 
         # Execute query
         result = execute_query(conn, query, config)
@@ -55,10 +55,9 @@ function querydf(
 
         return result
     finally
-        # Always close connection
+        # Always close connection using the SourceManager
         if conn !== nothing
-            log_message("Closing connection", config.verbose)
-            close(conn)
+            SourceManager.close_connection(conn, config.verbose)
         end
     end
 end
@@ -91,8 +90,8 @@ function querydf(
     conn = nothing
 
     try
-        # Initialize connection
-        conn = initialize_connection(dbfile, config)
+        # Initialize connection using the SourceManager
+        conn = SourceManager.initialize_connection(dbfile, config)
 
         # Execute the provided function with the connection
         f(conn)
@@ -108,10 +107,9 @@ function querydf(
 
         return result
     finally
-        # Always close connection
+        # Always close connection using the SourceManager
         if conn !== nothing
-            log_message("Closing connection", config.verbose)
-            close(conn)
+            SourceManager.close_connection(conn, config.verbose)
         end
     end
 end
@@ -155,8 +153,8 @@ function querydf(
     conn = nothing
 
     try
-        # Initialize connection
-        conn = initialize_connection(dbfile, config)
+        # Initialize connection using the SourceManager
+        conn = SourceManager.initialize_connection(dbfile, config)
 
         # Execute queries
         result = execute_queries(conn, queries, config)
@@ -169,10 +167,9 @@ function querydf(
 
         return result
     finally
-        # Always close connection
+        # Always close connection using the SourceManager
         if conn !== nothing
-            log_message("Closing connection", config.verbose)
-            close(conn)
+            SourceManager.close_connection(conn, config.verbose)
         end
     end
 end
@@ -205,8 +202,8 @@ function querydf(
     conn = nothing
 
     try
-        # Initialize connection
-        conn = initialize_connection(dbfile, config)
+        # Initialize connection using the SourceManager
+        conn = SourceManager.initialize_connection(dbfile, config)
 
         # Execute the provided function with the connection
         f(conn)
@@ -222,10 +219,9 @@ function querydf(
 
         return result
     finally
-        # Always close connection
+        # Always close connection using the SourceManager
         if conn !== nothing
-            log_message("Closing connection", config.verbose)
-            close(conn)
+            SourceManager.close_connection(conn, config.verbose)
         end
     end
 end
@@ -269,11 +265,11 @@ function querydf(
     conn = nothing
 
     try
-        # Initialize in-memory connection
-        conn = initialize_connection(":memory:", config)
+        # Initialize in-memory connection using the SourceManager
+        conn = SourceManager.initialize_connection(":memory:", config)
 
-        # Register DataFrame
-        register_dataframe(conn, "df", df)
+        # Register DataFrame using the SourceManager
+        SourceManager.register_source(conn, "df", df, config)
 
         # Execute query
         result = execute_query(conn, query, config)
@@ -286,10 +282,9 @@ function querydf(
 
         return result
     finally
-        # Always close connection
+        # Always close connection using the SourceManager
         if conn !== nothing
-            log_message("Closing connection", config.verbose)
-            close(conn)
+            SourceManager.close_connection(conn, config.verbose)
         end
     end
 end
@@ -333,12 +328,12 @@ function querydf(
     conn = nothing
 
     try
-        # Initialize in-memory connection
-        conn = initialize_connection(":memory:", config)
+        # Initialize in-memory connection using the SourceManager
+        conn = SourceManager.initialize_connection(":memory:", config)
 
-        # Register all DataFrames
+        # Register all DataFrames using the SourceManager
         for (name, df) in dfs
-            register_dataframe(conn, name, df)
+            SourceManager.register_source(conn, name, df, config)
         end
 
         # Execute query
@@ -352,10 +347,9 @@ function querydf(
 
         return result
     finally
-        # Always close connection
+        # Always close connection using the SourceManager
         if conn !== nothing
-            log_message("Closing connection", config.verbose)
-            close(conn)
+            SourceManager.close_connection(conn, config.verbose)
         end
     end
 end
@@ -399,26 +393,12 @@ function querydf(
     conn = nothing
 
     try
-        # Initialize in-memory connection
-        conn = initialize_connection(":memory:", config)
+        # Initialize in-memory connection using the SourceManager
+        conn = SourceManager.initialize_connection(":memory:", config)
 
-        # Register all sources
+        # Register all sources using the SourceManager
         for (name, source) in sources
-            if isa(source, DataFrame)
-                # Register DataFrame directly
-                register_dataframe(conn, name, source)
-            elseif isa(source, String)
-                # Attach database file with read-only flag if specified
-                if config.readonly
-                    attach_query = "ATTACH '$(source)' AS $(name) (READ_ONLY)"
-                else
-                    attach_query = "ATTACH '$(source)' AS $(name)"
-                end
-                log_message("Attaching database: $attach_query", config.verbose)
-                DuckDB.execute(conn, attach_query)
-            else
-                error("Unsupported source type: $(typeof(source))")
-            end
+            SourceManager.register_source(conn, name, source, config)
         end
 
         # Execute query
@@ -432,10 +412,9 @@ function querydf(
 
         return result
     finally
-        # Always close connection
+        # Always close connection using the SourceManager
         if conn !== nothing
-            log_message("Closing connection", config.verbose)
-            close(conn)
+            SourceManager.close_connection(conn, config.verbose)
         end
     end
 end

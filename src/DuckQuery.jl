@@ -8,6 +8,7 @@ using Dates
 using Printf
 
 include("types.jl")
+include("source/source_manager.jl")
 include("utils.jl")
 include("core.jl")
 

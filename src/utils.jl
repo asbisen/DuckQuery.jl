@@ -15,53 +15,12 @@ end
     initialize_connection(source::String, config::DuckQueryConfig)
 
 Initialize a DuckDB connection to the given source with the specified configuration.
+
+This is a compatibility wrapper around SourceManager.initialize_connection.
 """
 function initialize_connection(source::String, config::DuckQueryConfig)
     log_message("Initializing connection to $source", config.verbose)
-
-    # Create connection with read-only mode if specified
-    conn = nothing
-    if config.readonly && source != ":memory:"
-        log_message("Opening database in read-only mode", config.verbose)
-        cnf = DuckDB.Config()
-        DuckDB.set_config(cnf, "access_mode", "READ_ONLY")
-        conn = DuckDB.DB(source, cnf)
-    else
-        conn = DuckDB.DB(source)
-    end
-
-    # Apply configuration
-    for (key, value) in config.init_config
-        key_str = String(key)
-        value_str = string(value)
-        log_message("Setting config: $key_str = $value_str", config.verbose)
-
-        # For memory limit and similar settings
-        if key == :memory_limit
-            DuckDB.execute(conn, "SET memory_limit='$(value)'")
-        elseif key == :threads
-            DuckDB.execute(conn, "SET threads=$(value)")
-            # Handle other configuration settings
-        elseif key == :extensions
-            if isa(value, Vector)
-                for extension in value
-                    DuckDB.execute(conn, "INSTALL $(extension)")
-                    DuckDB.execute(conn, "LOAD $(extension)")
-                end
-            else
-                DuckDB.execute(conn, "INSTALL $(value)")
-                DuckDB.execute(conn, "LOAD $(value)")
-            end
-        end
-    end
-
-    # Execute initialization queries
-    for query in config.init_queries
-        log_message("Executing init query: $(query[1:min(30, length(query))])...", config.verbose)
-        DuckDB.execute(conn, query)
-    end
-
-    return conn
+    return SourceManager.initialize_connection(source, config)
 end
 
 
@@ -70,54 +29,23 @@ end
     register_dataframe(conn::DuckDB.DB, name::String, df::DataFrame)
 
 Register a DataFrame in the DuckDB connection with a given name.
+
+This is a compatibility wrapper around SourceManager.register_dataframe.
 """
 function register_dataframe(conn::DuckDB.DB, name::String, df::DataFrame)
-    # Simplified approach: Create a table from the DataFrame manually
-    # First, create a temporary table with the appropriate columns
-    if isempty(df)
-        # Handle empty dataframe case
-        columns = names(df)
-        types = [eltype(df[!, col]) for col in columns]
-        schema = join(["\"$(columns[i])\" $(get_duckdb_type(types[i]))" for i in 1:length(columns)], ", ")
-        DuckDB.execute(conn, "CREATE TEMPORARY TABLE $(name) ($schema)")
-        return
-    end
-
-    # For non-empty dataframes, create the table with data
-    columns = names(df)
-    types = [eltype(df[!, col]) for col in columns]
-
-    # Create a table from the DataFrame
-    schema = join(["\"$(columns[i])\" $(get_duckdb_type(types[i]))" for i in 1:length(columns)], ", ")
-    DuckDB.execute(conn, "CREATE TEMPORARY TABLE $(name) ($schema)")
-
-    # Insert data into the table
-    for row in eachrow(df)
-        values = [format_value_for_sql(row[col]) for col in columns]
-        DuckDB.execute(conn, "INSERT INTO $(name) VALUES ($(join(values, ", ")))")
-    end
+    # Create a basic config to pass to SourceManager
+    config = DuckQueryConfig()
+    return SourceManager.register_dataframe(conn, name, df, config)
 end
 
 # Helper function to convert Julia types to DuckDB types
+# This is a compatibility wrapper around SourceManager.get_duckdb_type
 function get_duckdb_type(type::Type)
-    if type <: Integer
-        return "INTEGER"
-    elseif type <: AbstractFloat
-        return "DOUBLE"
-    elseif type <: AbstractString
-        return "VARCHAR"
-    elseif type <: Bool
-        return "BOOLEAN"
-    elseif type <: Dates.Date
-        return "DATE"
-    elseif type <: Dates.DateTime
-        return "TIMESTAMP"
-    else
-        return "VARCHAR"
-    end
+    return SourceManager.get_duckdb_type(type)
 end
 
 # Helper function to format values for SQL
+# Kept for backward compatibility
 function format_value_for_sql(value)
     if value === missing
         return "NULL"
@@ -172,7 +100,12 @@ function execute_query(conn::DuckDB.DB, query::String, config::DuckQueryConfig)
         return result_df
     catch e
         if config.on_error == :throw
-            throw(DuckQueryError("Failed to execute query", query, e))
+            # If it's already a DuckDB.QueryException, rethrow it directly
+            if isa(e, DuckDB.QueryException)
+                throw(e)
+            else
+                throw(DuckQueryError("Failed to execute query", query, e))
+            end
         elseif config.on_error == :return_empty
             log_message("Error executing query, returning empty DataFrame: $(e)", true)
             return DataFrame()
