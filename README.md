@@ -290,19 +290,56 @@ profitability = querydf(
 using DuckQuery
 using DataFrames
 using Dates
+using Random
 
-# Create a sample DataFrame with new customer data
+# 1. First, create a DataFrame with existing customer data
+# These will be stored in the database file
+existing_customers = DataFrame(
+    id = 1:5,
+    name = ["Alice", "Bob", "Charlie", "David", "Eva"],
+    signup_date = [
+        Date(2023, 2, 15),  # 2023-02-15 (after 2023-01-01)
+        Date(2023, 3, 20),  # 2023-03-20 (after 2023-01-01)
+        Date(2022, 12, 10), # 2022-12-10 (before 2023-01-01)
+        Date(2023, 4, 5),   # 2023-04-05 (after 2023-01-01)
+        Date(2022, 11, 25)  # 2022-11-25 (before 2023-01-01)
+    ]
+)
+
+# Remove the database file if it exists (for a clean start)
+db_path = "customers.db"
+isfile(db_path) && rm(db_path)
+
+# 2. Write the existing customers DataFrame to the database file
+querydf(
+    Dict(
+        "customers_data" => existing_customers,
+        "db" => db_path
+    ),
+    """
+    -- Create a customers table in the database file
+    CREATE TABLE db.customers AS
+    SELECT * FROM customers_data
+    """
+)
+
+println("Existing customers have been written to the database file")
+
+# 3. Create a sample DataFrame with new customer data
 new_customers = DataFrame(
     id = 101:105,
     name = ["Frank", "Grace", "Heidi", "Ivan", "Julia"],
     signup_date = fill(today(), 5)
 )
 
-# Query combining database file and DataFrames
+println("\nNew customers data:")
+println(new_customers)
+
+# 4. Query combining database file and DataFrames
 results = querydf(
     Dict(
-        "existing" => "customers.db",  # Database file
-        "new_data" => new_customers   # DataFrame
+        "existing" => db_path,       # Database file
+        "new_data" => new_customers  # DataFrame
     ),
     """
     SELECT
@@ -321,21 +358,73 @@ results = querydf(
     FROM new_data
 
     ORDER BY signup_date DESC, name
+    """,
+    verbose=true  # Turn on verbose logging
+)
+
+# Display the results
+println("\nCombined query results:")
+println(results)
+
+
+
+# Using database file for lookup tables with in-memory data
+using DuckQuery
+using DataFrames
+using Random
+using Dates
+
+# 1. First, create a product catalog DataFrame
+product_catalog = DataFrame(
+    code = ["A001", "B002", "C003", "D004", "E005"],
+    name = ["Laptop", "Desk Chair", "Coffee Maker", "Headphones", "Desk Lamp"],
+    category = ["Electronics", "Furniture", "Appliances", "Electronics", "Lighting"],
+    price = [1200.00, 150.00, 75.50, 89.99, 45.00],
+    description = [
+        "High-performance laptop",
+        "Ergonomic office chair",
+        "Programmable coffee maker",
+        "Noise-cancelling headphones",
+        "LED desk lamp with adjustable brightness"
+    ]
+)
+
+# Remove the database file if it exists (for a clean start)
+db_path = "product_catalog.db"
+isfile(db_path) && rm(db_path)
+
+# 2. Write the product catalog DataFrame to the database file
+# We'll use DuckQuery to create the catalog table in the database
+querydf(
+    Dict(
+        "products" => product_catalog,
+        "db" => db_path
+    ),
+    """
+    -- Create a catalog table in the database file
+    CREATE TABLE db.catalog AS
+    SELECT * FROM products
     """
 )
 
-# Using database file for lookup tables with in-memory data
+println("Product catalog has been written to the database file")
+
+# 3. Create a transactions DataFrame
+Random.seed!(123)  # For reproducible results
 transactions = DataFrame(
     id = 1:100,
     product_code = rand(["A001", "B002", "C003", "D004", "E005"], 100),
     amount = rand(10.0:500.0, 100)
 )
 
-# Use product catalog in DB with in-memory transaction data
+println("\nExample transactions data:")
+println(first(transactions, 5))
+
+# 4. Now query the database together with the transactions DataFrame
 enriched_data = querydf(
     Dict(
         "transactions" => transactions,
-        "products" => "product_catalog.db"
+        "products" => db_path
     ),
     """
     SELECT
@@ -347,8 +436,14 @@ enriched_data = querydf(
     FROM transactions t
     JOIN products.catalog p ON t.product_code = p.code
     ORDER BY t.id
-    """
+    """,
+    verbose=true  # Turn on verbose logging
 )
+
+# Display the first few rows of the result
+println("\nEnriched data result:")
+println(first(enriched_data, 10))
+
 ```
 
 ### Connection Management
